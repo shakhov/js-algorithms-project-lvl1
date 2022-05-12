@@ -1,2 +1,3 @@
 ### Hexlet tests and linter status:
-[![Actions Status](https://github.com/shakhov/js-algorithms-project-lvl1/workflows/hexlet-check/badge.svg)](https://github.com/shakhov/js-algorithms-project-lvl1/actions)
+[![Hexlet actions Status](https://github.com/shakhov/js-algorithms-project-lvl1/workflows/hexlet-check/badge.svg)](https://github.com/shakhov/js-algorithms-project-lvl1/actions)
+[![CI github action status](https://github.com/shakhov/js-algorithms-project-lvl1/workflows/Node%20CI/badge.svg)](https://github.com/shakhov/js-algorithms-project-lvl1/actions)
