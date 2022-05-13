@@ -7,7 +7,7 @@ const getTextWords = (text = '') => (
 );
 
 const orderByRelevance = (records) => (
-  _.orderBy(Object.values(records), ['uniqueCount', 'totalCount'], ['desc', 'desc'])
+  _.orderBy(records, ['uniqueCount', 'totalCount'], ['desc', 'desc'])
 );
 
 const buildDocumentIndex = (({ id, text }, initialIndex = {}) => {
@@ -17,8 +17,7 @@ const buildDocumentIndex = (({ id, text }, initialIndex = {}) => {
     const wordData = indexAcc[word] || {};
     const docData = wordData[id] || {};
     const freq = (docData.freq || 0) + 1;
-    _.set(wordData, [id, 'id'], id);
-    _.set(wordData, [id, 'freq'], freq);
+    wordData[id] = { id, freq };
     return { ...indexAcc, [word]: wordData };
   }, initialIndex);
 });
@@ -34,10 +33,12 @@ const buildSearchEngine = (documents = []) => {
     }
 
     const terms = word.match(wordRegexp());
+
     const searchResult = terms
       .map((term) => invertedIndex[term] || [])
+      .map((termData) => Object.values(termData))
       .reduce((resultAcc, termData) => (
-        Object.values(termData).reduce((termAcc, { id, freq }) => {
+        termData.reduce((termAcc, { id, freq }) => {
           const docData = termAcc[id] || {};
           const uniqueCount = (docData.uniqueCount || 0) + 1;
           const totalCount = (docData.totalCount || 0) + freq;
@@ -45,7 +46,7 @@ const buildSearchEngine = (documents = []) => {
         }, resultAcc)
       ), {});
 
-    return orderByRelevance(searchResult).map(({ id }) => id);
+    return orderByRelevance(Object.values(searchResult)).map(({ id }) => id);
   };
 
   return {
