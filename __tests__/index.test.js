@@ -24,3 +24,13 @@ test('word search', () => {
   const word = 'shoot';
   expect(searchEngine.search(word)).toEqual(['doc1', 'doc2']);
 });
+
+test('regexp search', () => {
+  expect(searchEngine.search('pint')).toEqual(['doc1']);
+  expect(searchEngine.search('pint!')).toEqual(['doc1']);
+  expect(searchEngine.search('shooter')).toEqual(['doc3']);
+});
+
+test('missing word', () => {
+  expect(searchEngine.search('missingWord')).toEqual([]);
+});

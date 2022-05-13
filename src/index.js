@@ -1,12 +1,14 @@
+const wordRegexp = () => /[\w']+/g;
+
 const getTextWords = (text = '') => (
-  text.split(' ').filter((w) => w !== '')
+  text.match(wordRegexp())
 );
 
 const buildDocumentIndex = (({ id, text }, initialIndex = {}) => {
   const documentWords = getTextWords(text);
-  return documentWords.reduce((acc, word) => {
-    const documentIds = acc[word] || new Set();
-    return { ...acc, [word]: documentIds.add(id) };
+  return documentWords.reduce((indexAcc, word) => {
+    const documentIds = indexAcc[word] || new Set();
+    return { ...indexAcc, [word]: documentIds.add(id) };
   }, initialIndex);
 });
 
@@ -15,7 +17,14 @@ const buildSearchEngine = (documents = []) => {
     buildDocumentIndex(document, indexAcc)
   ), {});
 
-  const search = (word) => [...(invertedIndex[word] || [])];
+  const search = (word) => {
+    if (word === '') {
+      return [];
+    }
+    const [term] = word.match(wordRegexp());
+    return [...(invertedIndex[term] || [])];
+  };
+
   return {
     documents,
     search,
