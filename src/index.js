@@ -55,9 +55,7 @@ const buildSearchEngine = (documents = []) => {
         termData.reduce((termAcc, { id, termFrequency }) => {
           const docData = termAcc.find((item) => item.id === id) || [];
           const tfIdf = termFrequency * inverseDocumentFrequency(term);
-          const totalScore = (docData.totalScore || 0)
-                + (tfIdf * ((termFrequency * (1 + 2.0))
-                            / (termFrequency + 2.0)));
+          const totalScore = (docData.totalScore || 0) + tfIdf;
           return termAcc
             .filter((item) => item.id !== id)
             .concat({
