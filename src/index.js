@@ -12,31 +12,23 @@ const orderByRelevance = (records) => (
   _.orderBy(records, ['totalScore'], ['desc'])
 );
 
-const buildDocumentIndex = (({ id, text }, initialIndex = {}) => {
+const buildDocumentIndex = (({ id, text }) => {
   const documentTerms = getTextTerms(text);
-  console.log(documentTerms);
-  const termsCount = documentTerms.length;
-  return documentTerms.reduce((indexAcc, term) => {
-    const termData = indexAcc[term] || [];
-    const docData = termData.find((item) => item.id === id);
-    const rawCount = (docData?.rawCount || 0) + 1;
-    const termFrequency = rawCount / termsCount;
-
-    return {
-      ...indexAcc,
-      [term]: termData
-        .filter((item) => item.id !== id)
-        .concat({ id, rawCount, termFrequency }),
-    };
-  }, initialIndex);
+  const totalTermsCount = documentTerms.length;
+  const termsCount = _.countBy(documentTerms);
+  return _.mapValues(termsCount, (rawCount) => {
+    const termFrequency = rawCount / totalTermsCount;
+    return [{ id, rawCount, termFrequency }];
+  });
 });
 
 const buildSearchEngine = (documents = []) => {
   const documentsCount = documents.length;
 
-  const invertedIndex = documents.reduce((indexAcc, document) => (
-    buildDocumentIndex(document, indexAcc)
-  ), {});
+  const invertedIndex = _.mergeWith(
+    ...documents.map((document) => buildDocumentIndex(document)),
+    (objValue, srcValue) => (objValue || []).concat(srcValue),
+  );
 
   const inverseDocumentFrequency = (term) => {
     const docsContainingTermCount = invertedIndex[term].length;
