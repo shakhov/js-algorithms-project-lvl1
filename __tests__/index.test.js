@@ -20,9 +20,12 @@ test('has search', () => {
   expect(emptySearchEngine.search('')).toEqual([]);
 });
 
+test('empty search string', () => {
+  expect(searchEngine.search('')).toEqual([]);
+});
+
 test('word search', () => {
-  const word = 'shoot';
-  expect(searchEngine.search(word)).toEqual(['doc1', 'doc2']);
+  expect(searchEngine.search('shoot')).toEqual(['doc2', 'doc1']);
 });
 
 test('regexp search', () => {

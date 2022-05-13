@@ -1,14 +1,25 @@
+import _ from 'lodash';
+
 const wordRegexp = () => /[\w']+/g;
 
 const getTextWords = (text = '') => (
   text.match(wordRegexp())
 );
 
+const orderByFreq = (records, order = 'desc') => (
+  _.orderBy(Object.values(records), ['freq'], [order])
+);
+
 const buildDocumentIndex = (({ id, text }, initialIndex = {}) => {
   const documentWords = getTextWords(text);
+
   return documentWords.reduce((indexAcc, word) => {
-    const documentIds = indexAcc[word] || new Set();
-    return { ...indexAcc, [word]: documentIds.add(id) };
+    const wordData = indexAcc[word] || {};
+    const docData = wordData[id] || {};
+    const freq = (docData.freq || 0) + 1;
+    _.set(wordData, [id, 'id'], id);
+    _.set(wordData, [id, 'freq'], freq);
+    return { ...indexAcc, [word]: wordData };
   }, initialIndex);
 });
 
@@ -21,8 +32,11 @@ const buildSearchEngine = (documents = []) => {
     if (word === '') {
       return [];
     }
+
     const [term] = word.match(wordRegexp());
-    return [...(invertedIndex[term] || [])];
+    const wordOccurences = invertedIndex[term] || [];
+
+    return orderByFreq(wordOccurences, 'desc').map(({ id }) => id);
   };
 
   return {
