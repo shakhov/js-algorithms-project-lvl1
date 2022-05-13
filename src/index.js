@@ -1,9 +1,11 @@
 import _ from 'lodash';
 
-const termRegexp = () => /[\w']+/ig;
+const termRegexp = () => /[\w']+/g;
 
 const getTextTerms = (text = '') => (
-  text.match(termRegexp())
+  text
+    .match(termRegexp())
+    .map((term) => term.toLowerCase())
 );
 
 const orderByRelevance = (records) => (
@@ -12,8 +14,8 @@ const orderByRelevance = (records) => (
 
 const buildDocumentIndex = (({ id, text }, initialIndex = {}) => {
   const documentTerms = getTextTerms(text);
+  console.log(documentTerms);
   const termsCount = documentTerms.length;
-
   return documentTerms.reduce((indexAcc, term) => {
     const termData = indexAcc[term] || [];
     const docData = termData.find((item) => item.id === id);
@@ -38,16 +40,15 @@ const buildSearchEngine = (documents = []) => {
 
   const inverseDocumentFrequency = (term) => {
     const docsContainingTermCount = invertedIndex[term].length;
-    return Math.log(1 + (documentsCount - docsContainingTermCount + 0.5)
-                    / (docsContainingTermCount + 0.5));
+    return Math.log(1.0 + documentsCount / docsContainingTermCount);
   };
 
-  const search = (request) => {
-    if (request === '') {
+  const search = (query) => {
+    if (query === '') {
       return [];
     }
 
-    const searchTerms = request.match(termRegexp());
+    const searchTerms = getTextTerms(query);
 
     const searchResult = searchTerms
       .map((term) => [term, invertedIndex[term] || []])
