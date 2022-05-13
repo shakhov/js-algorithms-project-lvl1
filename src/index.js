@@ -1,13 +1,13 @@
 import _ from 'lodash';
 
-const termRegexp = () => /[\w']+/g;
+const termRegexp = () => /[\w']+/ig;
 
 const getTextTerms = (text = '') => (
   text.match(termRegexp())
 );
 
 const orderByRelevance = (records) => (
-  _.orderBy(records, ['uniqueCount', 'totalTfIdf'], ['desc', 'desc'])
+  _.orderBy(records, ['totalScore'], ['desc'])
 );
 
 const buildDocumentIndex = (({ id, text }, initialIndex = {}) => {
@@ -37,8 +37,9 @@ const buildSearchEngine = (documents = []) => {
   ), {});
 
   const inverseDocumentFrequency = (term) => {
-    const docs = invertedIndex[term];
-    return Math.log10(documentsCount / docs.length);
+    const docsContainingTermCount = invertedIndex[term].length;
+    return Math.log(1 + (documentsCount - docsContainingTermCount + 0.5)
+                    / (docsContainingTermCount + 0.5));
   };
 
   const search = (request) => {
@@ -51,16 +52,16 @@ const buildSearchEngine = (documents = []) => {
     const searchResult = searchTerms
       .map((term) => [term, invertedIndex[term] || []])
       .reduce((resultAcc, [term, termData]) => (
-        termData.reduce((termAcc, { id, termFrequency, rawCount }) => {
+        termData.reduce((termAcc, { id, termFrequency }) => {
           const docData = termAcc.find((item) => item.id === id) || [];
-          const uniqueCount = (docData.uniqueCount || 0) + 1;
-          const totalCount = (docData.totalCount || 0) + rawCount;
           const tfIdf = termFrequency * inverseDocumentFrequency(term);
-          const totalTfIdf = (docData.totalTfIdf || 0) + tfIdf;
+          const totalScore = (docData.totalScore || 0)
+                + (tfIdf * ((termFrequency * (1 + 2.0))
+                            / (termFrequency + 2.0)));
           return termAcc
             .filter((item) => item.id !== id)
             .concat({
-              id, uniqueCount, totalCount, totalTfIdf,
+              id, totalScore,
             });
         }, resultAcc)
       ), []);
