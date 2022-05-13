@@ -22,6 +22,31 @@ const buildDocumentIndex = (({ id, text }) => {
   });
 });
 
+const search = (invertedIndex, getIdf) => (query) => {
+  if (query === '') {
+    return [];
+  }
+
+  const searchTerms = getTextTerms(query);
+
+  const searchResult = searchTerms
+    .map((term) => [term, invertedIndex[term] || []])
+    .reduce((resultAcc, [term, termData]) => (
+      termData.reduce((termAcc, { id, termFrequency }) => {
+        const docData = termAcc.find((item) => item.id === id) || [];
+        const tfIdf = termFrequency * getIdf(term);
+        const totalScore = (docData.totalScore || 0) + tfIdf;
+        return termAcc
+          .filter((item) => item.id !== id)
+          .concat({
+            id, totalScore,
+          });
+      }, resultAcc)
+    ), []);
+
+  return orderByRelevance(searchResult).map(({ id }) => id);
+};
+
 const buildSearchEngine = (documents = []) => {
   const documentsCount = documents.length;
 
@@ -35,34 +60,9 @@ const buildSearchEngine = (documents = []) => {
     return Math.log(1.0 + documentsCount / docsContainingTermCount);
   };
 
-  const search = (query) => {
-    if (query === '') {
-      return [];
-    }
-
-    const searchTerms = getTextTerms(query);
-
-    const searchResult = searchTerms
-      .map((term) => [term, invertedIndex[term] || []])
-      .reduce((resultAcc, [term, termData]) => (
-        termData.reduce((termAcc, { id, termFrequency }) => {
-          const docData = termAcc.find((item) => item.id === id) || [];
-          const tfIdf = termFrequency * inverseDocumentFrequency(term);
-          const totalScore = (docData.totalScore || 0) + tfIdf;
-          return termAcc
-            .filter((item) => item.id !== id)
-            .concat({
-              id, totalScore,
-            });
-        }, resultAcc)
-      ), []);
-
-    return orderByRelevance(searchResult).map(({ id }) => id);
-  };
-
   return {
     documents,
-    search,
+    search: search(invertedIndex, inverseDocumentFrequency),
   };
 };
 
