@@ -14,11 +14,13 @@ const buildDocumentIndex = (({ id, text }, initialIndex = {}) => {
   const documentWords = getTextWords(text);
 
   return documentWords.reduce((indexAcc, word) => {
-    const wordData = indexAcc[word] || {};
-    const docData = wordData[id] || {};
-    const freq = (docData.freq || 0) + 1;
-    wordData[id] = { id, freq };
-    return { ...indexAcc, [word]: wordData };
+    const wordData = indexAcc[word] || [];
+    const docData = wordData.find((item) => item.id === id);
+    const rawCount = (docData?.rawCount || 0) + 1;
+    const newWordData = wordData
+          .filter((item) => item.id !== id)
+          .concat({ id, rawCount });
+    return {...indexAcc, [word]: newWordData };
   }, initialIndex);
 });
 
@@ -26,6 +28,8 @@ const buildSearchEngine = (documents = []) => {
   const invertedIndex = documents.reduce((indexAcc, document) => (
     buildDocumentIndex(document, indexAcc)
   ), {});
+
+  console.log(invertedIndex);
 
   const search = (word) => {
     if (word === '') {
@@ -36,17 +40,18 @@ const buildSearchEngine = (documents = []) => {
 
     const searchResult = terms
       .map((term) => invertedIndex[term] || [])
-      .map((termData) => Object.values(termData))
       .reduce((resultAcc, termData) => (
-        termData.reduce((termAcc, { id, freq }) => {
-          const docData = termAcc[id] || {};
+        termData.reduce((termAcc, { id, rawCount }) => {
+          const docData = termAcc.find((item) => item.id === id) || [];
           const uniqueCount = (docData.uniqueCount || 0) + 1;
-          const totalCount = (docData.totalCount || 0) + freq;
-          return { ...termAcc, [id]: { id, uniqueCount, totalCount } };
+          const totalCount = (docData.totalCount || 0) + rawCount;
+          return termAcc
+            .filter((item) => item.id !== id)
+            .concat({ id, uniqueCount, totalCount });
         }, resultAcc)
-      ), {});
+      ), []);
 
-    return orderByRelevance(Object.values(searchResult)).map(({ id }) => id);
+    return orderByRelevance(searchResult).map(({ id }) => id);
   };
 
   return {
