@@ -37,3 +37,7 @@ test('regexp search', () => {
 test('missing word', () => {
   expect(searchEngine.search('missingWord')).toEqual([]);
 });
+
+test('multiple words', () => {
+  expect(searchEngine.search('shoot at me')).toEqual(['doc2', 'doc1']);
+});
