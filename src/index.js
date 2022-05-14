@@ -8,15 +8,11 @@ const getTextTerms = (text = '') => (
     .map((term) => term.toLowerCase())
 );
 
-const orderByRelevance = (records) => (
-  _.orderBy(records, ['totalScore'], ['desc'])
-);
-
 const buildDocumentIndex = (({ id, text }) => {
   const documentTerms = getTextTerms(text);
   const totalTermsCount = documentTerms.length;
-  const termsCount = _.countBy(documentTerms);
-  return _.mapValues(termsCount, (rawCount) => {
+  const countByTerms = _.countBy(documentTerms);
+  return _.mapValues(countByTerms, (rawCount) => {
     const termFrequency = rawCount / totalTermsCount;
     return [{ id, rawCount, termFrequency }];
   });
@@ -29,22 +25,24 @@ const search = (invertedIndex, getIdf) => (query) => {
 
   const searchTerms = getTextTerms(query);
 
-  const searchResult = searchTerms
-    .map((term) => [term, invertedIndex[term] || []])
-    .reduce((resultAcc, [term, termData]) => (
-      termData.reduce((termAcc, { id, termFrequency }) => {
-        const docData = termAcc.find((item) => item.id === id) || [];
-        const tfIdf = termFrequency * getIdf(term);
-        const totalScore = (docData.totalScore || 0) + tfIdf;
-        return termAcc
-          .filter((item) => item.id !== id)
-          .concat({
-            id, totalScore,
-          });
-      }, resultAcc)
-    ), []);
+  const documentsContainingTerms = _.flatMap(searchTerms, (term) => {
+    if (!invertedIndex[term]) {
+      return {};
+    }
+    const termIdf = getIdf(term);
+    return invertedIndex[term].map(({ id, termFrequency }) => {
+      const score = termFrequency * termIdf;
+      return { [id]: score };
+    });
+  });
 
-  return orderByRelevance(searchResult).map(({ id }) => id);
+  const documentsScores = _.mergeWith(
+    ...documentsContainingTerms,
+    (totalScore, score) => (totalScore || 0) + score,
+  );
+
+  const uniqueDocuments = Object.keys(documentsScores);
+  return uniqueDocuments.sort((a, b) => documentsScores[b] - documentsScores[a]);
 };
 
 const buildSearchEngine = (documents = []) => {
@@ -56,8 +54,8 @@ const buildSearchEngine = (documents = []) => {
   );
 
   const inverseDocumentFrequency = (term) => {
-    const docsContainingTermCount = invertedIndex[term].length;
-    return Math.log(1.0 + documentsCount / docsContainingTermCount);
+    const documentsContainingTermCount = invertedIndex[term].length;
+    return Math.log(1.0 + documentsCount / documentsContainingTermCount);
   };
 
   return {
